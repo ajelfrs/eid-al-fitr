@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selamat Idul Fitri!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f2027;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- 1. LAYAR TERKUNCI --- */
+        #locked-screen {
+            display: none; /* Default sembunyi, muncul via JS */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            background: linear-gradient(to bottom, #141e30, #243b55);
+            padding: 20px;
+            z-index: 20;
+        }
+
+        .lock-icon { font-size: 4rem; margin-bottom: 20px; }
+        .lock-text { color: #d4af37; font-size: 1.1rem; line-height: 1.5; }
+
+        /* --- 2. LAYAR INTRO (KETUPAT) --- */
+        #intro-screen {
+            display: none; /* Muncul via JS jika sudah waktunya */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #203a43, #0f2027);
+            position: absolute;
+            z-index: 10;
+            transition: all 1s ease-in-out;
+        }
+
+        .click-text {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            color: #d4af37;
+            letter-spacing: 2px;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* --- 3. LAYAR UTAMA (PESAN) --- */
+        #main-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            padding: 80px 20px 60px 20px;
+            background: url('https://www.transparenttextures.com/patterns/arabesque.png'), linear-gradient(135deg, #112d26, #091a14);
+            width: 100%;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .title {
+            color: #d4af37;
+            font-size: 2.2rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .message {
+            max-width: 600px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #d4af37;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .moon { font-size: 3rem; margin-bottom: 10px; animation: bounce 2s infinite ease-in-out; }
+
+        /* Animations & Utilities */
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .explode { transform: scale(5); opacity: 0; pointer-events: none; transition: 0.8s; }
+        .fade-out { opacity: 0; visibility: hidden; }
+        .show-flex { display: flex !important; }
+        .show-main { display: flex !important; animation: showUp 2s forwards; }
+        @keyframes showUp { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div id="locked-screen">
+        <div class="lock-icon">🔒</div>
+        <p class="lock-text">Maaf keylaa, halaman ini baru bisa diakses <br> mulai pukul 00:00 ya! <br><br> Sabar ya Keyla, kejutan menantimu! ✨ <br> atau rayu ajell biar dibuka sekarang</p>
+    </div>
+
+    <div id="intro-screen">
+        <div id="btn-ketupat" onclick="bukaHadiah()" style="cursor: pointer;">
+            <img src="kupa.png" class="animate__animated animate__tada animate__slow animate__infinite" style="height:200px; width: 200px;">
+        </div>
+        <p class="click-text">Klik Ketupatnya Keyla 💖</p>
+    </div>
+
+    <div id="main-screen">
+        <div class="moon">🌙✨</div>
+        <h1 class="title animate__animated animate__fadeInUp animate__slower">Selamat Hari Raya Idul Fitri</h1>
+        <div class="message" id="typing-container"></div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // Ganti tanggal ini ke tanggal lebaran (Contoh: "2026-03-30")
+        const TANGGAL_BUKA = "2026-03-21"; 
+        const JAM_BUKA = "00:00:00";
+
+        const pesanTeks = "Minal Aidin Wal Faizin, Keylaaa! 🙏\n\nDi hari yang fitri ini, ajel minta maaf ya lahir dan batin. Kalau selama ini ajell banyak salah kata, perbuatan, atau kadang bikin keylaa betmut, marah, sebel, tolong dimaafin ya keylaa.\n\nSemoga di lebaran tahun ini dan seterusnya, kita bisa terus sama-sama, makin sabar ngadepin satu sama lain. Makasi udah dateng dihidup ajell, ajel beruntung banget bisa kenal sama keyla, dan bisa sedeket ini. tetap jadi keyla yang seperti inii yaa..\n\nLove you! 🤍🤍";
+
+        // --- LOGIC CEK WAKTU ---
+        window.onload = function() {
+            const sekarang = new Date();
+            const waktuBuka = new Date(TANGGAL_BUKA + "T" + JAM_BUKA);
+
+            if (sekarang < waktuBuka) {
+                document.getElementById("locked-screen").classList.add("show-flex");
+            } else {
+                document.getElementById("intro-screen").classList.add("show-flex");
+            }
+        };
+
+        // --- LOGIC TRANSISI ---
+        function bukaHadiah() {
+            let ketupat = document.getElementById("btn-ketupat");
+            let introScreen = document.getElementById("intro-screen");
+            let mainScreen = document.getElementById("main-screen");
+
+            ketupat.classList.add("explode");
+            
+            setTimeout(() => {
+                introScreen.classList.add("fade-out");
+                setTimeout(() => {
+                    introScreen.style.display = "none";
+                    mainScreen.classList.add("show-main");
+                    mulaiNgetik();
+                }, 500);
+            }, 800);
+        }
+
+        // --- LOGIC ANIMASI KETIK ---
+        function mulaiNgetik() {
+            const elemenPesan = document.getElementById("typing-container");
+            elemenPesan.innerHTML = "";
+            let i = 0;
+
+            function ngetik() {
+                if (i < pesanTeks.length) {
+                    if (pesanTeks.charAt(i) === "\n") {
+                        elemenPesan.innerHTML += "<br>";
+                    } else {
+                        elemenPesan.innerHTML += pesanTeks.charAt(i);
+                    }
+                    i++;
+                    setTimeout(ngetik, 50);
+
+                    // Auto-scroll ke bawah saat ngetik
+                    const mainContainer = document.getElementById("main-screen");
+                    mainContainer.scrollTop = mainContainer.scrollHeight;
+                }
+            }
+            ngetik();
+        }
+    </script>
+</body>
+</html>
